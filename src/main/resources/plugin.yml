@@ -1,0 +1,15 @@
+name: Hugs
+main: net.okocraft.hugs.Hugs
+version: ${project.version}
+author: Siroshun09
+api-version: "1.13"
+commands:
+  hug:
+    description: Hug other players by command
+permissions:
+  hugs.hug:
+    default: true
+    description: Allow to hug other players.
+  hugs.command:
+    default: op
+    description: Allow to hug other players by command.
