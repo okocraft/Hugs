@@ -45,7 +45,6 @@ public class Hugs extends JavaPlugin implements Listener {
         }
 
         if (!player.hasPermission("hugs.hug")) {
-            sendMessage(player, "&c権限がありません。");
             return;
         }
 
@@ -60,24 +59,24 @@ public class Hugs extends JavaPlugin implements Listener {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player)) {
-            sendMessage(sender, "&cこのコマンドはプレイヤーのみ実行できます。");
+            sender.sendMessage(Messages.ONLY_PLAYER);
             return true;
         }
 
         if (!sender.hasPermission("hugs.command")) {
-            sendMessage(sender, "&c権限がありません。");
+            sender.sendMessage(Messages.NO_PERMISSION);
             return true;
         }
 
         if (args.length == 0) {
-            sendMessage(sender, "&b/hug <player>");
+            sender.sendMessage(Messages.COMMAND_USAGE);
             return true;
         }
 
         Player target = getServer().getPlayer(args[0]);
 
         if (target == null) {
-            sendMessage(sender, "&7あなたが抱擁したかった人はここにはいない...");
+            sender.sendMessage(Messages.PLAYER_NOT_FOUND);
             return true;
         }
 
@@ -99,22 +98,18 @@ public class Hugs extends JavaPlugin implements Listener {
         spawnEffects(player, entity.getLocation());
 
         if (player.getName().equals(entity.getName())) {
-            sendMessage(player, "&7癒えぬ痛みに、あなたは心を慰めようとした。無常を味わった。");
+            player.sendMessage(Messages.HUG_SELF);
             return;
         }
 
         if (entity instanceof Player) {
             spawnEffects((Player) entity, player.getLocation());
 
-            sendMessage(player, "&b" + entity.getName() + "&7 を抱きしめちゃった!");
-            sendMessage(entity, "&b" + player.getName() + "&7 に抱きしめられちゃった!");
+            player.sendMessage(Messages.HUG_PLAYER.apply(entity.getName()));
+            entity.sendMessage(Messages.HUG_HUGGED.apply(player.getName()));
         } else {
-            sendMessage(player, "&e" + entity.getName() + "&7 を抱きしめちゃった!");
+            player.sendMessage(Messages.HUG_ENTITY.apply(entity.getName()));
         }
-    }
-
-    private void sendMessage(CommandSender receiver, String msg) {
-        receiver.sendMessage(("&8[&dハグ&8]&r " + msg).replace("&", "§"));
     }
 
     private void spawnEffects(Player player, Location loc) {
