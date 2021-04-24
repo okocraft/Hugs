@@ -1,9 +1,8 @@
 package net.okocraft.hugs;
 
-import org.bukkit.Location;
+import com.destroystokyo.paper.ParticleBuilder;
+import net.kyori.adventure.sound.Sound;
 import org.bukkit.Particle;
-import org.bukkit.Sound;
-import org.bukkit.SoundCategory;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Entity;
@@ -24,6 +23,12 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class Hugs extends JavaPlugin implements Listener {
+
+    private static final Sound HUG_SOUND =
+            Sound.sound(org.bukkit.Sound.ENTITY_CAT_PURR, Sound.Source.MASTER, 0.96f, 1.0f);
+
+    private static final ParticleBuilder HUG_PARTICLE =
+            new ParticleBuilder(Particle.HEART).offset(0.5, 0.5, 0.5).count(13);
 
     private final Map<Player, Long> lastHugTime = new HashMap<>();
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
@@ -103,7 +108,8 @@ public class Hugs extends JavaPlugin implements Listener {
             lastHugTime.put(player, System.currentTimeMillis());
         }
 
-        spawnEffects(player, entity.getLocation());
+        HUG_PARTICLE.location(entity.getLocation()).receivers(player).spawn();
+        player.playSound(HUG_SOUND);
 
         if (player.getName().equals(entity.getName())) {
             player.sendMessage(Messages.HUG_SELF);
@@ -111,17 +117,14 @@ public class Hugs extends JavaPlugin implements Listener {
         }
 
         if (entity instanceof Player) {
-            spawnEffects((Player) entity, player.getLocation());
+            var target = (Player) entity;
+            HUG_PARTICLE.location(player.getLocation()).receivers(target).spawn();
+            target.playSound(HUG_SOUND);
 
-            player.sendMessage(Messages.HUG_PLAYER.apply(entity.getName()));
-            entity.sendMessage(Messages.HUG_HUGGED.apply(player.getName()));
+            player.sendMessage(Messages.HUG_PLAYER.apply(target.getName()));
+            target.sendMessage(Messages.HUG_HUGGED.apply(player.getName()));
         } else {
             player.sendMessage(Messages.HUG_ENTITY.apply(entity.getName()));
         }
-    }
-
-    private void spawnEffects(Player player, Location loc) {
-        player.playSound(player.getLocation(), Sound.ENTITY_CAT_PURR, SoundCategory.MASTER, 0.96f, 1.0f);
-        player.spawnParticle(Particle.HEART, loc.getX(), loc.getY() + 0.5, loc.getZ(), 13, 0.5, 0.5, 0.5);
     }
 }
