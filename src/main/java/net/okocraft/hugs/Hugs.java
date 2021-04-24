@@ -90,7 +90,7 @@ public class Hugs extends JavaPlugin implements Listener {
     private void hug(Player player, Entity entity) {
         long last = lastHugTime.getOrDefault(player, 0L);
 
-        if (System.currentTimeMillis() - last < 1) {
+        if (System.currentTimeMillis() - last < 1000) {
             return;
         } else {
             lastHugTime.put(player, System.currentTimeMillis());
