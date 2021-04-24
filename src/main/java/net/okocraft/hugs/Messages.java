@@ -74,7 +74,7 @@ final class Messages {
 
     private static final TranslationRegistry REGISTRY = TranslationRegistry.create(Key.key("hugs", "language"));
 
-    static void init(@NotNull Hugs plugin) throws IOException {
+    static void register(@NotNull Hugs plugin) throws IOException {
         REGISTRY.defaultLocale(Locale.ENGLISH);
 
         load(plugin, Locale.ENGLISH);

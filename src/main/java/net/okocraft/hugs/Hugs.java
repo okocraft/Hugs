@@ -21,6 +21,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.logging.Level;
 
 public class Hugs extends JavaPlugin implements Listener {
 
@@ -35,13 +36,23 @@ public class Hugs extends JavaPlugin implements Listener {
 
     @Override
     public void onEnable() {
-        getServer().getPluginManager().registerEvents(this, this);
+        var pluginManager = getServer().getPluginManager();
+
+        try {
+            Messages.register(this);
+        } catch (Throwable e) {
+            getLogger().log(Level.SEVERE, "An error occurred while loading messages", e);
+            pluginManager.disablePlugin(this);
+        }
+
+        pluginManager.registerEvents(this, this);
     }
 
     @Override
     public void onDisable() {
         lastHugTime.clear();
         HandlerList.unregisterAll((Listener) this);
+        Messages.unregister();
         executor.shutdownNow();
     }
 
