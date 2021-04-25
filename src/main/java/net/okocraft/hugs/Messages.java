@@ -12,6 +12,7 @@ import java.util.PropertyResourceBundle;
 import java.util.function.Function;
 
 import static net.kyori.adventure.text.Component.text;
+import static net.kyori.adventure.text.Component.space;
 import static net.kyori.adventure.text.Component.translatable;
 import static net.kyori.adventure.text.format.NamedTextColor.AQUA;
 import static net.kyori.adventure.text.format.NamedTextColor.DARK_GRAY;
@@ -27,6 +28,7 @@ final class Messages {
                     .append(text().content("[").color(DARK_GRAY))
                     .append(translatable().key("hugs.prefix").color(LIGHT_PURPLE).build())
                     .append(text().content("]").color(DARK_GRAY))
+                    .append(space())
                     .build();
 
     static final Component NO_PERMISSION =
