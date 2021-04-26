@@ -12,7 +12,7 @@
 ## Requirements
 
 - Java 11+
-- Spigot (Minecraft Version 1.13+)
+- Paper 1.16+
 
 ## License
 
