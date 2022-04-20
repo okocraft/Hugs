@@ -20,4 +20,4 @@
 
 This project is under the GPL-3.0 license. Please see [LICENSE](LICENSE) for more info.
 
-Copyright © 2019-2020, Siroshun09
+Copyright © 2019-2022, Siroshun09
