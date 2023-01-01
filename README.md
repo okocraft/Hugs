@@ -1,6 +1,6 @@
 # Hugs
 ![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/okocraft/Hugs)
-![GitHub Workflow Status](https://img.shields.io/github/workflow/status/okocraft/Hugs/Java%20CI)
+![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/okocraft/Hugs/maven.yml?branch=master)
 ![GitHub](https://img.shields.io/github/license/okocraft/Hugs)
 
 エンティティやプレイヤーを **スニーク + 右クリック** することで抱擁できる Spigot プラグインです。
@@ -20,4 +20,4 @@
 
 This project is under the GPL-3.0 license. Please see [LICENSE](LICENSE) for more info.
 
-Copyright © 2019-2022, Siroshun09
+Copyright © 2019-2023, Siroshun09
