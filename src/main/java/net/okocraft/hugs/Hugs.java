@@ -17,10 +17,8 @@ import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 
 public class Hugs extends JavaPlugin implements Listener {
@@ -31,8 +29,7 @@ public class Hugs extends JavaPlugin implements Listener {
     private static final ParticleBuilder HUG_PARTICLE =
             new ParticleBuilder(Particle.HEART).offset(0.5, 0.5, 0.5).count(13);
 
-    private final Map<Player, Long> lastHugTime = new HashMap<>();
-    private final ExecutorService executor = Executors.newSingleThreadExecutor();
+    private final Map<Player, Long> lastHugTime = new ConcurrentHashMap<>();
 
     @Override
     public void onEnable() {
@@ -53,7 +50,6 @@ public class Hugs extends JavaPlugin implements Listener {
         lastHugTime.clear();
         HandlerList.unregisterAll((Listener) this);
         Messages.unregister();
-        executor.shutdownNow();
     }
 
     @EventHandler(ignoreCancelled = true)
@@ -63,7 +59,7 @@ public class Hugs extends JavaPlugin implements Listener {
         var hand = e.getHand();
 
         if (hand == EquipmentSlot.HAND && player.isSneaking() && entity instanceof LivingEntity) {
-            executor.submit(() -> processRightClick(player, entity));
+            processRightClick(player, entity);
         }
     }
 
@@ -74,12 +70,11 @@ public class Hugs extends JavaPlugin implements Listener {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!(sender instanceof Player)) {
-            sender.sendMessage(Messages.ONLY_PLAYER);
-            return true;
+        if (sender instanceof Player) {
+            processCommand((Player) sender, args);
+        } else {
+            sender.sendMessage(Messages.ONLY_PLAYER);;
         }
-
-        executor.submit(() -> processCommand((Player) sender, args));
         return true;
     }
 
