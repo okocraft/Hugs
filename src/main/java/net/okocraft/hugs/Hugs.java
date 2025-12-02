@@ -122,8 +122,7 @@ public class Hugs extends JavaPlugin implements Listener {
             return;
         }
 
-        if (entity instanceof Player) {
-            var target = (Player) entity;
+        if (entity instanceof Player target) {
             HUG_PARTICLE.location(player.getLocation()).receivers(target).spawn();
             target.playSound(HUG_SOUND);
 
