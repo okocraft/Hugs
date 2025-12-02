@@ -3,16 +3,18 @@ package net.okocraft.hugs;
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.translation.GlobalTranslator;
-import net.kyori.adventure.translation.TranslationRegistry;
+import net.kyori.adventure.translation.TranslationStore;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.text.MessageFormat;
 import java.util.Locale;
 import java.util.PropertyResourceBundle;
 import java.util.function.Function;
 
-import static net.kyori.adventure.text.Component.text;
 import static net.kyori.adventure.text.Component.space;
+import static net.kyori.adventure.text.Component.text;
 import static net.kyori.adventure.text.Component.translatable;
 import static net.kyori.adventure.text.format.NamedTextColor.AQUA;
 import static net.kyori.adventure.text.format.NamedTextColor.DARK_GRAY;
@@ -50,7 +52,7 @@ final class Messages {
             name -> PREFIX.append(
                     translatable()
                             .key("hugs.hug-entity")
-                            .args(text().content(name).color(YELLOW).build())
+                            .arguments(text().content(name).color(YELLOW).build())
                             .color(GRAY)
                             .build()
             );
@@ -59,7 +61,7 @@ final class Messages {
             name -> PREFIX.append(
                     translatable()
                             .key("hugs.hug-player")
-                            .args(text().content(name).color(AQUA).build())
+                            .arguments(text().content(name).color(AQUA).build())
                             .color(GRAY)
                             .build()
             );
@@ -68,13 +70,13 @@ final class Messages {
             name -> PREFIX.append(
                     translatable()
                             .key("hugs.hug-hugged")
-                            .args(text().content(name).color(AQUA).build())
+                            .arguments(text().content(name).color(AQUA).build())
                             .color(GRAY)
                             .build()
             );
 
 
-    private static final TranslationRegistry REGISTRY = TranslationRegistry.create(Key.key("hugs", "language"));
+    private static final TranslationStore<MessageFormat> REGISTRY = TranslationStore.messageFormat(Key.key("hugs", "language"));
 
     static void register(@NotNull Hugs plugin) throws IOException {
         REGISTRY.defaultLocale(Locale.ENGLISH);
@@ -82,19 +84,18 @@ final class Messages {
         load(plugin, Locale.ENGLISH);
         load(plugin, Locale.JAPAN);
 
-        GlobalTranslator.get().addSource(REGISTRY);
+        GlobalTranslator.translator().addSource(REGISTRY);
     }
 
     static void unregister() {
-        GlobalTranslator.get().removeSource(REGISTRY);
+        GlobalTranslator.translator().removeSource(REGISTRY);
     }
 
     private static void load(@NotNull Hugs plugin, @NotNull Locale locale) throws IOException {
-        var input = plugin.getResource(locale + ".properties");
-
+        InputStream input = plugin.getResource(locale + ".properties");
         if (input != null) {
-            var bundle = new PropertyResourceBundle(input);
-            REGISTRY.registerAll(locale, bundle, true);
+            PropertyResourceBundle bundle = new PropertyResourceBundle(input);
+            REGISTRY.registerAll(locale, bundle.keySet(), key -> new MessageFormat(bundle.getString(key)));
         }
     }
 }
