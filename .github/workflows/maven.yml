@@ -6,11 +6,15 @@ jobs:
     uses: okocraft/workflows/.github/workflows/maven.yml@v1
     with:
       java-version: '11'
-  build-java-16:
-    uses: okocraft/workflows/.github/workflows/maven.yml@v1
-    with:
-      java-version: '16'
   build-java-17:
     uses: okocraft/workflows/.github/workflows/maven.yml@v1
     with:
       java-version: '17'
+  build-java-21:
+    uses: okocraft/workflows/.github/workflows/maven.yml@v1
+    with:
+      java-version: '21'
+  build-java-25:
+    uses: okocraft/workflows/.github/workflows/maven.yml@v1
+    with:
+      java-version: '25'
