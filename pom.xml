@@ -6,7 +6,7 @@
 
     <groupId>net.okocraft.hugs</groupId>
     <artifactId>hugs</artifactId>
-    <version>1.2</version>
+    <version>1.3-SNAPSHOT</version>
 
     <name>Hugs</name>
 
