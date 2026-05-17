@@ -11,7 +11,7 @@
 
 ## Requirements
 
-- Java 21+
+- Java 25+
 - Paper 1.21.10+
 
 ## License
@@ -20,4 +20,4 @@
 
 This project is under the GPL-3.0 license. Please see [LICENSE](LICENSE) for more info.
 
-Copyright © 2019-2025, Siroshun09
+Copyright © 2019-2026, Siroshun09
