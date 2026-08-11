@@ -1,10 +1,13 @@
 package net.okocraft.hugs;
 
 import com.destroystokyo.paper.ParticleBuilder;
+import io.papermc.paper.command.brigadier.Commands;
+import io.papermc.paper.command.brigadier.argument.ArgumentTypes;
+import io.papermc.paper.command.brigadier.argument.resolvers.selector.PlayerSelectorArgumentResolver;
+import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
 import net.kyori.adventure.sound.Sound;
 import org.bukkit.Particle;
 import org.bukkit.command.Command;
-import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
@@ -42,6 +45,7 @@ public class Hugs extends JavaPlugin implements Listener {
             pluginManager.disablePlugin(this);
         }
 
+        registerCommands();
         pluginManager.registerEvents(this, this);
     }
 
@@ -68,41 +72,55 @@ public class Hugs extends JavaPlugin implements Listener {
         lastHugTime.remove(e.getPlayer());
     }
 
-    @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (sender instanceof Player) {
-            processCommand((Player) sender, args);
-        } else {
-            sender.sendMessage(Messages.ONLY_PLAYER);;
-        }
-        return true;
+    private void registerCommands() {
+        getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, event ->
+                event.registrar().register(
+                        Commands.literal("hug")
+                                .executes(context -> {
+                                    var sender = context.getSource().getSender();
+
+                                    if (!sender.hasPermission("hugs.command")) {
+                                        sender.sendMessage(Messages.NO_PERMISSION);
+                                    } else if (sender instanceof Player) {
+                                        sender.sendMessage(Messages.COMMAND_USAGE);
+                                    } else {
+                                        sender.sendMessage(Messages.ONLY_PLAYER);
+                                    }
+
+                                    return Command.SINGLE_SUCCESS;
+                                })
+                                .then(Commands.argument("player", ArgumentTypes.player())
+                                        .executes(context -> {
+                                            var sender = context.getSource().getSender();
+
+                                            if (!sender.hasPermission("hugs.command")) {
+                                                sender.sendMessage(Messages.NO_PERMISSION);
+                                                return Command.SINGLE_SUCCESS;
+                                            }
+
+                                            if (!(sender instanceof Player player)) {
+                                                sender.sendMessage(Messages.ONLY_PLAYER);
+                                                return Command.SINGLE_SUCCESS;
+                                            }
+
+                                            var target = context
+                                                    .getArgument("player", PlayerSelectorArgumentResolver.class)
+                                                    .resolve(context.getSource())
+                                                    .getFirst();
+
+                                            hug(player, target);
+                                            return Command.SINGLE_SUCCESS;
+                                        }))
+                                .build(),
+                        "Hug other players by command"
+                )
+        );
     }
 
     private void processRightClick(@NotNull Player player, @NotNull Entity target) {
         if (player.hasPermission("hugs.hug")) {
             hug(player, target);
         }
-    }
-
-    private void processCommand(@NotNull Player player, @NotNull String[] args) {
-        if (!player.hasPermission("hugs.command")) {
-            player.sendMessage(Messages.NO_PERMISSION);
-            return;
-        }
-
-        if (args.length == 0) {
-            player.sendMessage(Messages.COMMAND_USAGE);
-            return;
-        }
-
-        var target = getServer().getPlayer(args[0]);
-
-        if (target == null) {
-            player.sendMessage(Messages.PLAYER_NOT_FOUND);
-            return;
-        }
-
-        hug(player, target);
     }
 
     private void hug(Player player, Entity entity) {
