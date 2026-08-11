@@ -438,9 +438,6 @@ In addition to normal startup checks, run BT-003 and BT-004.
 
 ## Test Design Notes
 
-- The current `pom.xml` uses Java 25 and `paper-api 26.2.build.92-stable`.
-- `plugin.yml` declares `api-version: "1.16"`.
-- `plugin.yml` declares `folia-supported: true`.
 - No config file, scheduler usage, persistent data, inventory manipulation, world/chunk manipulation, NMS access, or reflection was found in the inspected primary implementation files.
 - Do not measure the one-second cooldown boundary precisely. Verify only that rapid repetition is suppressed and that the action works again after roughly one second.
 - Do not split particle and sound verification into separate tests; observe them during the hug operations above.
