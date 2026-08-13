@@ -12,6 +12,7 @@ import java.text.MessageFormat;
 import java.util.Locale;
 import java.util.PropertyResourceBundle;
 import java.util.function.Function;
+import java.util.function.IntFunction;
 
 import static net.kyori.adventure.text.Component.space;
 import static net.kyori.adventure.text.Component.text;
@@ -33,17 +34,11 @@ final class Messages {
                     .append(space())
                     .build();
 
-    static final Component NO_PERMISSION =
-            PREFIX.append(translatable().key("hugs.no-permission").color(RED).build());
-
-    static final Component ONLY_PLAYER =
-            PREFIX.append(translatable().key("hugs.only-player").color(RED).build());
-
-    static final Component COMMAND_USAGE =
-            PREFIX.append(translatable().key("hugs.command-usage").color(GRAY).build());
-
     static final Component PLAYER_NOT_FOUND =
             PREFIX.append(translatable().key("hugs.player-not-found").color(RED).build());
+
+    static final Component COOL_DOWN =
+            PREFIX.append(translatable().key("hugs.cool-down").color(RED).build());
 
     static final Component HUG_SELF =
             PREFIX.append(translatable().key("hugs.hug-self").color(GRAY).build());
@@ -62,6 +57,15 @@ final class Messages {
                     translatable()
                             .key("hugs.hug-player")
                             .arguments(text().content(name).color(AQUA).build())
+                            .color(GRAY)
+                            .build()
+            );
+
+    static final IntFunction<Component> HUG_MULTIPLE =
+            count -> PREFIX.append(
+                    translatable()
+                            .key("hugs.hug-multiple")
+                            .arguments(text(count, AQUA))
                             .color(GRAY)
                             .build()
             );

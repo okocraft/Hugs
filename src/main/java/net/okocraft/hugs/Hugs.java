@@ -1,9 +1,11 @@
 package net.okocraft.hugs;
 
-import com.destroystokyo.paper.ParticleBuilder;
+import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
+import io.papermc.paper.registry.keys.SoundEventKeys;
 import net.kyori.adventure.sound.Sound;
+import org.bukkit.Location;
 import org.bukkit.Particle;
-import org.bukkit.command.Command;
+import org.bukkit.command.BlockCommandSender;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
@@ -15,21 +17,22 @@ import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.jetbrains.annotations.NotNull;
+import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 
+import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 
+@NullMarked
 public class Hugs extends JavaPlugin implements Listener {
 
     private static final Sound HUG_SOUND =
-            Sound.sound(org.bukkit.Sound.ENTITY_CAT_PURR, Sound.Source.MASTER, 0.96f, 1.0f);
+            Sound.sound(SoundEventKeys.ENTITY_CAT_PURR, Sound.Source.MASTER, 0.96f, 1.0f);
 
-    private static final ParticleBuilder HUG_PARTICLE =
-            new ParticleBuilder(Particle.HEART).offset(0.5, 0.5, 0.5).count(13);
-
-    private final Map<Player, Long> lastHugTime = new ConcurrentHashMap<>();
+    private final Map<UUID, Long> lastHugTime = new ConcurrentHashMap<>();
 
     @Override
     public void onEnable() {
@@ -40,8 +43,10 @@ public class Hugs extends JavaPlugin implements Listener {
         } catch (Throwable e) {
             getLogger().log(Level.SEVERE, "An error occurred while loading messages", e);
             pluginManager.disablePlugin(this);
+            return;
         }
 
+        this.getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, event -> HugCommand.register(event.registrar(), this::isInCoolDown, this::hug));
         pluginManager.registerEvents(this, this);
     }
 
@@ -56,80 +61,97 @@ public class Hugs extends JavaPlugin implements Listener {
     public void onInteract(PlayerInteractEntityEvent e) {
         var player = e.getPlayer();
         var entity = e.getRightClicked();
-        var hand = e.getHand();
 
-        if (hand == EquipmentSlot.HAND && player.isSneaking() && entity instanceof LivingEntity) {
-            processRightClick(player, entity);
+        if (
+                e.getHand() != EquipmentSlot.HAND ||
+                !player.isSneaking() ||
+                !(entity instanceof LivingEntity) ||
+                !player.hasPermission("hugs.hug") ||
+                this.isInCoolDown(player)
+        ) {
+            return;
         }
+
+        this.hug(player, List.of(entity));
     }
 
     @EventHandler
     public void onLeave(PlayerQuitEvent e) {
-        lastHugTime.remove(e.getPlayer());
+        lastHugTime.remove(e.getPlayer().getUniqueId());
     }
 
-    @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (sender instanceof Player) {
-            processCommand((Player) sender, args);
-        } else {
-            sender.sendMessage(Messages.ONLY_PLAYER);;
-        }
-        return true;
+    private boolean isInCoolDown(Player player) {
+        return System.currentTimeMillis() - lastHugTime.getOrDefault(player.getUniqueId(), 0L) < 1000;
     }
 
-    private void processRightClick(@NotNull Player player, @NotNull Entity target) {
-        if (player.hasPermission("hugs.hug")) {
-            hug(player, target);
+    private void hug(CommandSender source, List<? extends Entity> targets) {
+        Player sourcePlayer = source instanceof Player p ? p : null;
+        if (sourcePlayer != null) {
+            this.lastHugTime.put(sourcePlayer.getUniqueId(), System.currentTimeMillis());
+        }
+
+        notifySource(source, targets);
+
+        targets.forEach(target -> {
+            if (target instanceof Player targetPlayer) {
+                notifyTargetPlayer(source, targetPlayer);
+            }
+        });
+    }
+
+    private static void notifySource(CommandSender source, List<? extends Entity> targets) {
+        Entity singleTarget = targets.size() == 1 ? targets.getFirst() : null;
+
+        if (source instanceof Player player) {
+            Location targetLocation = singleTarget != null ? singleTarget.getLocation() : null;
+            spawnHugEffect(player, targetLocation);
+        }
+
+        if (singleTarget == null) {
+            source.sendMessage(Messages.HUG_MULTIPLE.apply(targets.size()));
+        } else if (!source.equals(singleTarget)) {
+            source.sendMessage(
+                    singleTarget instanceof Player ?
+                            Messages.HUG_PLAYER.apply(singleTarget.getName()) :
+                            Messages.HUG_ENTITY.apply(singleTarget.getName())
+            );
         }
     }
 
-    private void processCommand(@NotNull Player player, @NotNull String[] args) {
-        if (!player.hasPermission("hugs.command")) {
-            player.sendMessage(Messages.NO_PERMISSION);
+    private static void notifyTargetPlayer(CommandSender source, Player target) {
+        if (source.equals(target)) {
+            target.sendMessage(Messages.HUG_SELF);
             return;
         }
 
-        if (args.length == 0) {
-            player.sendMessage(Messages.COMMAND_USAGE);
-            return;
-        }
+        Location sourceLocation = switch (source) {
+            case Entity entity -> entity.getLocation();
+            case BlockCommandSender block -> block.getBlock().getLocation();
+            default -> null;
+        };
 
-        var target = getServer().getPlayer(args[0]);
-
-        if (target == null) {
-            player.sendMessage(Messages.PLAYER_NOT_FOUND);
-            return;
-        }
-
-        hug(player, target);
+        spawnHugEffect(target, sourceLocation);
+        target.sendMessage(Messages.HUG_HUGGED.apply(source.getName()));
     }
 
-    private void hug(Player player, Entity entity) {
-        long last = lastHugTime.getOrDefault(player, 0L);
+    private static void spawnHugEffect(Player target, @Nullable Location location) {
+        if (location != null && isInViewDistance(target, location)) {
+            target.spawnParticle(Particle.HEART, location, 13, 0.5, 0.5, 0.5);
+        }
+        target.playSound(HUG_SOUND);
+    }
 
-        if (System.currentTimeMillis() - last < 1000) {
-            return;
-        } else {
-            lastHugTime.put(player, System.currentTimeMillis());
+    private static boolean isInViewDistance(Player player, Location location) {
+        if (!player.getWorld().equals(location.getWorld())) {
+            return false;
         }
 
-        HUG_PARTICLE.location(entity.getLocation()).receivers(player).spawn();
-        player.playSound(HUG_SOUND);
+        Location playerLocation = player.getLocation();
+        int chunkDistance = Math.max(
+                Math.abs((playerLocation.getBlockX() >> 4) - (location.getBlockX() >> 4)),
+                Math.abs((playerLocation.getBlockZ() >> 4) - (location.getBlockZ() >> 4))
+        );
 
-        if (player.getName().equals(entity.getName())) {
-            player.sendMessage(Messages.HUG_SELF);
-            return;
-        }
-
-        if (entity instanceof Player target) {
-            HUG_PARTICLE.location(player.getLocation()).receivers(target).spawn();
-            target.playSound(HUG_SOUND);
-
-            player.sendMessage(Messages.HUG_PLAYER.apply(target.getName()));
-            target.sendMessage(Messages.HUG_HUGGED.apply(player.getName()));
-        } else {
-            player.sendMessage(Messages.HUG_ENTITY.apply(entity.getName()));
-        }
+        return chunkDistance <= Math.min(player.getSendViewDistance(), player.getClientViewDistance());
     }
 }
