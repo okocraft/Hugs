@@ -53,6 +53,11 @@ final class HugCommand {
             return 0;
         }
 
+        if (targets.isEmpty()) {
+            context.getSource().getSender().sendMessage(Messages.PLAYER_NOT_FOUND);
+            return 0;
+        }
+
         doHug.accept(source, targets);
         return targets.size();
     }
