@@ -20,6 +20,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -28,6 +29,8 @@ import java.util.logging.Level;
 
 @NullMarked
 public class Hugs extends JavaPlugin implements Listener {
+
+    private static final long HUG_COOLDOWN_NANOS = Duration.ofSeconds(1).toNanos();
 
     private static final Sound HUG_SOUND =
             Sound.sound(SoundEventKeys.ENTITY_CAT_PURR, Sound.Source.MASTER, 0.96f, 1.0f);
@@ -82,7 +85,7 @@ public class Hugs extends JavaPlugin implements Listener {
 
     private boolean isInCoolDown(Player player) {
         Long lastHug = lastHugTime.get(player.getUniqueId());
-        return lastHug != null && System.nanoTime() - lastHug < 1_000_000_000L;
+        return lastHug != null && System.nanoTime() - lastHug < HUG_COOLDOWN_NANOS;
     }
 
     private void hug(CommandSender source, List<? extends Entity> targets) {
