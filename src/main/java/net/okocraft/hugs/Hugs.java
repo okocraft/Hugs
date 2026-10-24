@@ -81,13 +81,14 @@ public class Hugs extends JavaPlugin implements Listener {
     }
 
     private boolean isInCoolDown(Player player) {
-        return System.currentTimeMillis() - lastHugTime.getOrDefault(player.getUniqueId(), 0L) < 1000;
+        Long lastHug = lastHugTime.get(player.getUniqueId());
+        return lastHug != null && System.nanoTime() - lastHug < 1_000_000_000L;
     }
 
     private void hug(CommandSender source, List<? extends Entity> targets) {
         Player sourcePlayer = source instanceof Player p ? p : null;
         if (sourcePlayer != null) {
-            this.lastHugTime.put(sourcePlayer.getUniqueId(), System.currentTimeMillis());
+            this.lastHugTime.put(sourcePlayer.getUniqueId(), System.nanoTime());
         }
 
         notifySource(source, targets);
