@@ -29,7 +29,7 @@ Related code:
 ### CB-002: Target-specific hug feedback
 
 Description:
-A successful hug gives the initiating player heart particles, the hug sound, and a result message. When the target is another player, that player also receives particles, sound, and a notification. When the target is a non-player `LivingEntity`, only the initiator receives the target-name message. Self-hugging uses a dedicated message.
+A successful hug gives the initiating player heart particles, the hug sound, and a result message. When the target is another player, that player also receives particles, sound, and a notification. When the target is a non-player `LivingEntity`, only the initiator receives the target-name message. Self-hugging (`/hug <self>`) uses a dedicated message and gives one particle burst and one sound. Heart particles are sent only when the particle location is within the recipient's view distance; the sound and message are always sent. A non-player sender (console) gives the target the sound and message but no particles.
 
 Importance:
 If the action executes without visible, audible, or textual feedback, users cannot reliably tell that the hug succeeded.
@@ -43,7 +43,12 @@ Related code:
 ### CB-003: `/hug` command
 
 Description:
-A player with the `hugs.command` permission can hug an online player with `/hug <player>`. Missing arguments, an unavailable target, and insufficient permission must reject the action and return the corresponding message.
+A sender with the `hugs.command` permission can hug online players with `/hug <player>`. The argument is a player selector, so `@a` and similar selectors hug several players and answer with the "Hugged N of them!" message. The console is allowed to use the command. Rejections must not produce any hug effect (particles, sound, notification) or start a cooldown:
+- Missing argument: the standard "Unknown or incomplete command" error (there is no Hugs usage message).
+- A well-formed name or selector that matches no online player: the `player-not-found` message.
+- A name that is not a valid player name (for example longer than 16 characters): rejected by the vanilla parser ("Invalid name or UUID") before Hugs runs.
+- Insufficient permission: the command is hidden by `requires`, so the result is also "Unknown or incomplete command" (there is no no-permission message).
+Only `hugs.command` is checked for the command; `hugs.hug` applies to the sneak-right-click path only.
 
 Importance:
 This is the second public hug path documented in the README. Because the permission defaults to `op`, broken permission handling would also be a server-administration regression.
@@ -55,7 +60,7 @@ Related code:
 ### CB-004: Repeated-hug suppression
 
 Description:
-A repeated hug from the same player within one second is ignored. After at least one second, the player can hug again.
+A repeated hug from the same player within one second is ignored. For sneak-right-click the repeat is silent; for `/hug` the sender receives the cool-down message. After at least one second, the player can hug again.
 
 Importance:
 This prevents repeated event delivery or rapid input from generating duplicate particles, sounds, and messages. If it fails, an ordinary interaction may appear to execute multiple times.
@@ -99,23 +104,23 @@ Platform:
 Paper | Bukkit API
 
 Usage:
-`plugin.yml` registers the `hug` command and the `hugs.hug` / `hugs.command` permissions. Runtime behavior relies on Bukkit command dispatch and online-player lookup.
+`plugin.yml` declares the `hugs.hug` (default `true`) and `hugs.command` (default `op`) permissions. The `hug` command is registered through Paper's Brigadier lifecycle event (`LifecycleEvents.COMMANDS`), not in `plugin.yml`. Runtime behavior relies on Brigadier dispatch, the `players()` selector argument, and `Permissible#hasPermission`.
 
 Affected behaviors:
 - CB-001
 - CB-003
 
 Regression risks:
-- `/hug` is not registered or cannot execute.
+- `/hug` is not registered or cannot execute (including a changed `LifecycleEvents.COMMANDS` registration).
 - Permission defaults behave differently and ordinary players gain or lose unintended access.
-- Online-player lookup fails for a valid target.
+- Selector resolution changes, for example an empty result starts throwing or valid targets stop resolving.
 
 Relevant APIs / concepts:
-- `plugin.yml`
-- `JavaPlugin#onCommand`
+- `plugin.yml` permissions
+- `LifecycleEvents.COMMANDS` / `Commands`
+- `ArgumentTypes.players()` / `PlayerSelectorArgumentResolver`
 - `CommandSender`
-- `Player#hasPermission`
-- `Server#getPlayer`
+- `CommandSender#hasPermission`
 
 Related code:
 - `src/main/java/net/okocraft/hugs/Hugs.java`
@@ -127,7 +132,7 @@ Platform:
 Paper | Bukkit API
 
 Usage:
-The plugin uses Paper's `ParticleBuilder` to spawn `HEART` particles at the target location and Adventure `Sound` to play `ENTITY_CAT_PURR`.
+The plugin uses `Player#spawnParticle` to spawn 13 `HEART` particles at the hug location (only within the recipient's view distance) and Adventure `Sound` to play `ENTITY_CAT_PURR`.
 
 Affected behaviors:
 - CB-002
@@ -139,7 +144,7 @@ Regression risks:
 - Particle or sound changes produce runtime errors.
 
 Relevant APIs / concepts:
-- `com.destroystokyo.paper.ParticleBuilder`
+- `Player#spawnParticle`
 - `Particle.HEART`
 - `Player#playSound`
 - Adventure `Sound`
@@ -319,7 +324,7 @@ Operation:
 
 Pass criteria:
 - Step 1 gives A and B the normal player-to-player hug feedback.
-- Step 3 gives A heart particles and the hug sound.
+- Step 3 gives A exactly one heart particle burst and one hug sound.
 - Step 3 displays the dedicated self-hug message instead of the normal player-target message.
 - No exception appears in the server log as a result of either command.
 
@@ -339,22 +344,24 @@ Purpose:
 Verify that invalid or unauthorized command usage does not trigger a hug and that permission and input failures are handled safely.
 
 Setup:
-1. Log in test player A.
-2. Start with A as an operator.
-3. Ensure an administrator can remove A's operator status before the final player-command check.
+1. Log in test players O (operator), N (not an operator, `hugs.command` not granted) and B (target).
+2. Do not make N an operator; operators get the `op` default of `hugs.command`. To test a revoked permission, use a permission plugin (for example `lp user N permission set hugs.command true` / `unset`) and read the result back (`lp user N permission check hugs.command`).
 
 Operation:
-1. Have A run `/hug` with no arguments.
-2. Have A run `/hug HugsDefinitelyOffline`.
-3. Remove A's operator status.
-4. Have A run `/hug <online-player>`.
-5. Run `/hug <online-player>` from the server console.
+1. Have O run `/hug` with no arguments.
+2. Have O run `/hug HugsDefinitelyOffline` (21 characters, not a valid player name).
+3. Have O run `/hug NoSuchGuy` (a valid name of a player who is not online), then run `/hug B` about 0.4 seconds later.
+4. Have N run `/hug B`.
+5. Have O run `/hug B` as a control.
+6. Run `/hug B` from the server console.
 
 Pass criteria:
-- Step 1 displays `/hug <player>` usage and does not trigger a hug.
-- Step 2 reports that the target is unavailable and does not trigger a hug.
-- Step 4 displays the no-permission message and produces no particles, sound, or notification for the target.
-- Step 5 returns the player-only message to the console.
+- Step 1 triggers no hug; the standard "Unknown or incomplete command" error is shown.
+- Step 2 triggers no hug; the vanilla parser answers "Invalid name or UUID".
+- Step 3: `/hug NoSuchGuy` shows only the `player-not-found` message, with no hug sound or particles, and the following `/hug B` works (no cooldown was started).
+- Step 4 triggers no hug (no particles, sound or notification for B); the command is rejected as "Unknown or incomplete command".
+- Step 5 gives O and B the normal player-to-player hug feedback, so the observation channels are known to work.
+- Step 6 succeeds as a non-player sender: the console sees "Hugged B!", and B receives the notification and the sound but no particles.
 - None of the rejection paths produce a Hugs-related exception in the server log.
 
 Covers:
@@ -366,7 +373,7 @@ Typical duration:
 About 1 minute
 
 Notes:
-`hugs.command` defaults to `op`.
+`hugs.command` defaults to `op`. Steps 1, 2 and 4 are answered by Paper/Brigadier, not by Hugs messages, so assert on the absence of hug effects.
 
 ## Conditional Test Areas
 
